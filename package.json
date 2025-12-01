@@ -1,0 +1,17 @@
+{
+  "name": "orgaos",
+  "version": "1.0.0",
+  "description": "OrgaOS backend",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
