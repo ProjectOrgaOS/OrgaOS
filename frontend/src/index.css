@@ -1,0 +1,5 @@
+/* Tailwind directives - these inject Tailwind's styles */
+/* base = reset & default styles, components = reusable stuff, utilities = the actual classes */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
