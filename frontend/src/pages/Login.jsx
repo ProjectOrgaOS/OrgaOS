@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function Login() {
+function Login({ onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -19,9 +19,9 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
+        // Store token and redirect to dashboard
         localStorage.setItem('token', data.token);
-        alert('Logged in!');
+        onSuccess();
       } else {
         alert(data.message || 'Login failed');
       }

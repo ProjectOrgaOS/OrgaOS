@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function Register() {
+function Register({ onSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -21,6 +21,7 @@ function Register() {
 
       if (response.ok) {
         alert('Account created! You can now login.');
+        onSuccess();
       } else {
         alert(data.message || 'Registration failed');
       }
