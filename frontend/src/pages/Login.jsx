@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-function Login({ onSuccess }) {
+function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ function Login({ onSuccess }) {
       if (response.ok) {
         // Store token and redirect to dashboard
         localStorage.setItem('token', data.token);
-        onSuccess();
+        navigate('/dashboard');
       } else {
         alert(data.message || 'Login failed');
       }
@@ -67,6 +69,13 @@ function Login({ onSuccess }) {
             Sign In
           </button>
         </form>
+
+        <p className="text-center text-gray-600 mt-4">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-500 hover:underline">
+            Register
+          </Link>
+        </p>
       </div>
     </div>
   );

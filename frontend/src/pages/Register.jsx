@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-function Register({ onSuccess }) {
+function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ function Register({ onSuccess }) {
 
       if (response.ok) {
         alert('Account created! You can now login.');
-        onSuccess();
+        navigate('/login');
       } else {
         alert(data.message || 'Registration failed');
       }
@@ -78,6 +80,13 @@ function Register({ onSuccess }) {
             Create Account
           </button>
         </form>
+
+        <p className="text-center text-gray-600 mt-4">
+          Already have an account?{' '}
+          <Link to="/login" className="text-blue-500 hover:underline">
+            Login
+          </Link>
+        </p>
       </div>
     </div>
   );
