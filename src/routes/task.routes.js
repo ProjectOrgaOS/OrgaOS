@@ -3,6 +3,7 @@ import {
   createTask,
   getTasksByProject,
   updateTaskStatus,
+  updateTask,
   deleteTask,
 } from '../controllers/task.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
@@ -16,6 +17,9 @@ router.post('/', authMiddleware, createTask);
 
 // GET /api/tasks/project/:projectId - Get all tasks for a project
 router.get('/project/:projectId', authMiddleware, getTasksByProject);
+
+// PUT /api/tasks/:taskId - Update task (priority, title, etc.)
+router.put('/:taskId', authMiddleware, updateTask);
 
 // PUT /api/tasks/:taskId/status - Update task status (move between columns)
 router.put('/:taskId/status', authMiddleware, updateTaskStatus);

@@ -55,6 +55,28 @@ export async function updateTaskStatus(req, res) {
   }
 }
 
+// Update task (priority, title, description, etc.)
+export async function updateTask(req, res) {
+  try {
+    const { taskId } = req.params;
+    const updates = req.body;
+
+    const task = await Task.findByIdAndUpdate(
+      taskId,
+      updates,
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.status(200).json(task);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 // Delete a task
 export async function deleteTask(req, res) {
   try {

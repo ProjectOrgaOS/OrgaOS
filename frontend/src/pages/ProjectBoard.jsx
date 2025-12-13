@@ -9,6 +9,15 @@ function ProjectBoard() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Modal state for creating tasks
+  const [showModal, setShowModal] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [taskPriority, setTaskPriority] = useState('Medium');
+
+  // Edit menu state
+  const [openMenuId, setOpenMenuId] = useState(null);
+
   // Define our 3 columns
   const columns = ['To Do', 'In Progress', 'Done'];
 
@@ -16,6 +25,13 @@ function ProjectBoard() {
   useEffect(() => {
     fetchProjectAndTasks();
   }, [projectId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const fetchProjectAndTasks = async () => {
     try {
@@ -54,11 +70,99 @@ function ProjectBoard() {
     return tasks.filter(task => task.status === status);
   };
 
-  // Handle drag end - this is where the magic happens
+  // Create a new task
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: taskTitle,
+          description: taskDescription,
+          priority: taskPriority,
+          projectId: projectId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTasks([...tasks, data]);
+        setShowModal(false);
+        setTaskTitle('');
+        setTaskDescription('');
+        setTaskPriority('Medium');
+      } else {
+        alert(data.message || 'Failed to create task');
+      }
+    } catch (error) {
+      alert('Error connecting to server');
+    }
+  };
+
+  // Delete a task
+  const handleDeleteTask = async (taskId) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setTasks(tasks.filter(t => t._id !== taskId));
+      } else {
+        alert('Failed to delete task');
+      }
+    } catch (error) {
+      alert('Error connecting to server');
+    }
+    setOpenMenuId(null);
+  };
+
+  // Update task priority
+  const handleUpdatePriority = async (taskId, newPriority) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTasks(tasks.map(t => t._id === taskId ? data : t));
+      } else {
+        alert('Failed to update priority');
+      }
+    } catch (error) {
+      alert('Error connecting to server');
+    }
+    setOpenMenuId(null);
+  };
+
+  // Handle drag end
   const onDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
 
-    // If dropped outside or in the same place, do nothing
     if (!destination) return;
     if (
       destination.droppableId === source.droppableId &&
@@ -69,18 +173,14 @@ function ProjectBoard() {
 
     const newStatus = destination.droppableId;
     const taskId = draggableId;
-
-    // Save old tasks for rollback if API fails
     const oldTasks = [...tasks];
 
-    // Optimistic UI: Update local state immediately
     setTasks(prevTasks =>
       prevTasks.map(task =>
         task._id === taskId ? { ...task, status: newStatus } : task
       )
     );
 
-    // API Call: Update task status in backend
     try {
       const token = localStorage.getItem('token');
 
@@ -94,18 +194,15 @@ function ProjectBoard() {
       });
 
       if (!response.ok) {
-        // Revert on failure
         setTasks(oldTasks);
         console.error('Failed to update task status');
       }
     } catch (error) {
-      // Revert on error
       setTasks(oldTasks);
       console.error('Error updating task:', error);
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -128,14 +225,19 @@ function ProjectBoard() {
           <h1 className="text-3xl font-bold">{project?.name || 'Project Board'}</h1>
           <p className="text-gray-600">{project?.description}</p>
         </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
+        >
+          + Add Task
+        </button>
       </div>
 
-      {/* Kanban Board with Drag and Drop */}
+      {/* Kanban Board */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {columns.map((column) => (
             <div key={column} className="bg-gray-200 rounded-lg p-4">
-              {/* Column Header */}
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-bold text-lg">{column}</h2>
                 <span className="bg-gray-300 text-gray-700 px-2 py-1 rounded-full text-sm">
@@ -143,38 +245,88 @@ function ProjectBoard() {
                 </span>
               </div>
 
-              {/* Droppable Column */}
               <Droppable droppableId={column}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-3 min-h-[200px] transition-colors ${
-                      snapshot.isDraggingOver ? 'bg-gray-300 rounded-lg' : ''
+                    className={`space-y-3 min-h-[200px] rounded-lg transition-all duration-200 ${
+                      snapshot.isDraggingOver
+                        ? 'bg-blue-100 ring-2 ring-blue-300 ring-dashed'
+                        : ''
                     }`}
                   >
                     {getTasksByStatus(column).map((task, index) => (
-                      <Draggable
-                        key={task._id}
-                        draggableId={task._id}
-                        index={index}
-                      >
+                      <Draggable key={task._id} draggableId={task._id} index={index}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`bg-white p-4 rounded-lg shadow-sm transition ${
+                            style={{
+                              ...provided.draggableProps.style,
+                              transform: snapshot.isDragging
+                                ? `${provided.draggableProps.style?.transform || ''} rotate(1.5deg) scale(1.01)`
+                                : provided.draggableProps.style?.transform,
+                              transition: snapshot.isDropAnimating
+                                ? 'all 0.2s ease'
+                                : provided.draggableProps.style?.transition,
+                            }}
+                            className={`bg-white p-4 rounded-lg relative ${
                               snapshot.isDragging
-                                ? 'shadow-lg rotate-2'
-                                : 'hover:shadow-md'
+                                ? 'shadow-xl ring-2 ring-blue-400'
+                                : 'shadow-sm hover:shadow-md transition-shadow duration-200'
                             }`}
                           >
-                            <h3 className="font-semibold">{task.title}</h3>
+                            {/* Edit button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(openMenuId === task._id ? null : task._id);
+                              }}
+                              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
+                            >
+                              ⋮
+                            </button>
+
+                            {/* Dropdown menu */}
+                            {openMenuId === task._id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-8 right-2 bg-white border rounded-lg shadow-lg z-10 py-1 min-w-[140px]"
+                              >
+                                <p className="px-3 py-1 text-xs text-gray-500 font-semibold">Priority</p>
+                                <button
+                                  onClick={() => handleUpdatePriority(task._id, 'Low')}
+                                  className={`w-full text-left px-3 py-1 text-sm hover:bg-gray-100 ${task.priority === 'Low' ? 'bg-green-50 text-green-700' : ''}`}
+                                >
+                                  Low
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePriority(task._id, 'Medium')}
+                                  className={`w-full text-left px-3 py-1 text-sm hover:bg-gray-100 ${task.priority === 'Medium' ? 'bg-yellow-50 text-yellow-700' : ''}`}
+                                >
+                                  Medium
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePriority(task._id, 'High')}
+                                  className={`w-full text-left px-3 py-1 text-sm hover:bg-gray-100 ${task.priority === 'High' ? 'bg-red-50 text-red-700' : ''}`}
+                                >
+                                  High
+                                </button>
+                                <hr className="my-1" />
+                                <button
+                                  onClick={() => handleDeleteTask(task._id)}
+                                  className="w-full text-left px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+
+                            <h3 className="font-semibold pr-6">{task.title}</h3>
                             {task.description && (
-                              <p className="text-gray-600 text-sm mt-1">
-                                {task.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mt-1">{task.description}</p>
                             )}
                             <div className="flex justify-between items-center mt-3">
                               <span
@@ -200,7 +352,6 @@ function ProjectBoard() {
                     ))}
                     {provided.placeholder}
 
-                    {/* Empty state */}
                     {getTasksByStatus(column).length === 0 && !snapshot.isDraggingOver && (
                       <p className="text-gray-500 text-center py-4">No tasks</p>
                     )}
@@ -211,6 +362,69 @@ function ProjectBoard() {
           ))}
         </div>
       </DragDropContext>
+
+      {/* Create Task Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-6">Add New Task</h2>
+
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Task title"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Task description (optional)"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Priority</label>
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
+                >
+                  Add Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
