@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useSocket } from '../context/SocketContext';
 
 function ProjectBoard() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const socket = useSocket();
   const [tasks, setTasks] = useState([]);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,55 @@ function ProjectBoard() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  // Listen for real-time updates from Socket.io
+  useEffect(() => {
+    if (!socket) return;
+
+    // Helper: compare project IDs (handles ObjectId vs string)
+    const isSameProject = (taskProject) => {
+      return String(taskProject) === String(projectId);
+    };
+
+    // Handle task created by another user
+    const handleTaskCreated = (task) => {
+      if (isSameProject(task.project)) {
+        setTasks(prev => {
+          // Avoid duplicates (we already added it locally if we created it)
+          if (prev.some(t => t._id === task._id)) return prev;
+          return [...prev, task];
+        });
+      }
+    };
+
+    // Handle task updated (status, priority, etc.)
+    const handleTaskUpdated = (task) => {
+      console.log('Socket event received: taskUpdated', task);
+      console.log('Current projectId:', projectId, 'Task project:', task.project);
+      if (isSameProject(task.project)) {
+        console.log('Project matches, updating task');
+        setTasks(prev => prev.map(t => t._id === task._id ? task : t));
+      }
+    };
+
+    // Handle task deleted
+    const handleTaskDeleted = ({ taskId, project }) => {
+      if (isSameProject(project)) {
+        setTasks(prev => prev.filter(t => t._id !== taskId));
+      }
+    };
+
+    socket.on('taskCreated', handleTaskCreated);
+    socket.on('taskUpdated', handleTaskUpdated);
+    socket.on('taskDeleted', handleTaskDeleted);
+
+    // Cleanup: remove listeners when component unmounts
+    return () => {
+      socket.off('taskCreated', handleTaskCreated);
+      socket.off('taskUpdated', handleTaskUpdated);
+      socket.off('taskDeleted', handleTaskDeleted);
+    };
+  }, [socket, projectId]);
 
   const fetchProjectAndTasks = async () => {
     try {
