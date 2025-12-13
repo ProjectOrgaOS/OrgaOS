@@ -39,9 +39,14 @@ function ProjectBoard() {
   useEffect(() => {
     if (!socket) return;
 
+    // Helper: compare project IDs (handles ObjectId vs string)
+    const isSameProject = (taskProject) => {
+      return String(taskProject) === String(projectId);
+    };
+
     // Handle task created by another user
     const handleTaskCreated = (task) => {
-      if (task.project === projectId) {
+      if (isSameProject(task.project)) {
         setTasks(prev => {
           // Avoid duplicates (we already added it locally if we created it)
           if (prev.some(t => t._id === task._id)) return prev;
@@ -52,14 +57,17 @@ function ProjectBoard() {
 
     // Handle task updated (status, priority, etc.)
     const handleTaskUpdated = (task) => {
-      if (task.project === projectId) {
+      console.log('Socket event received: taskUpdated', task);
+      console.log('Current projectId:', projectId, 'Task project:', task.project);
+      if (isSameProject(task.project)) {
+        console.log('Project matches, updating task');
         setTasks(prev => prev.map(t => t._id === task._id ? task : t));
       }
     };
 
     // Handle task deleted
     const handleTaskDeleted = ({ taskId, project }) => {
-      if (project === projectId) {
+      if (isSameProject(project)) {
         setTasks(prev => prev.filter(t => t._id !== taskId));
       }
     };

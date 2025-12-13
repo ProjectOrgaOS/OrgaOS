@@ -14,7 +14,7 @@ export async function createTask(req, res) {
     });
 
     // Broadcast to all clients (frontend filters by project)
-    req.io.emit('taskCreated', task);
+    req.app.get('io').emit('taskCreated', task);
 
     res.status(201).json(task);
   } catch (error) {
@@ -53,7 +53,7 @@ export async function updateTaskStatus(req, res) {
     }
 
     // Broadcast status change to all clients
-    req.io.emit('taskUpdated', task);
+    req.app.get('io').emit('taskUpdated', task);
 
     res.status(200).json(task);
   } catch (error) {
@@ -78,7 +78,7 @@ export async function updateTask(req, res) {
     }
 
     // Broadcast update to all clients
-    req.io.emit('taskUpdated', task);
+    req.app.get('io').emit('taskUpdated', task);
 
     res.status(200).json(task);
   } catch (error) {
@@ -98,7 +98,7 @@ export async function deleteTask(req, res) {
     }
 
     // Broadcast deletion to all clients
-    req.io.emit('taskDeleted', { taskId, project: task.project });
+    req.app.get('io').emit('taskDeleted', { taskId, project: task.project });
 
     res.status(200).json({ message: 'Task deleted successfully' });
   } catch (error) {

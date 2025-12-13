@@ -15,16 +15,13 @@ const server = createServer(app);
 // Initialize Socket.io with CORS for our frontend
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   },
 });
 
-// Middleware: attach io to every request so controllers can emit events
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
+// Store io on app so controllers can access it via req.app.get('io')
+app.set('io', io);
 
 // Socket.io connection handler (we'll expand this later)
 io.on('connection', (socket) => {
