@@ -113,7 +113,8 @@ function Dashboard() {
           {projects.map((project) => (
             <div
               key={project._id}
-              className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition"
+              onClick={() => navigate(`/project/${project._id}`)}
+              className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer"
             >
               <h2 className="text-xl font-semibold mb-2">{project.name}</h2>
               <p className="text-gray-600">
