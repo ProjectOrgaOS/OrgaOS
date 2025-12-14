@@ -1,8 +1,8 @@
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useState, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 // Setup date-fns localizer
 const locales = {
@@ -56,20 +56,21 @@ function CalendarView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[500px]">
+      <div className="h-[600px] bg-white p-4 rounded-lg shadow-md flex items-center justify-center">
         <p className="text-gray-500">Loading calendar...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ height: 500 }}>
+    <div className="h-[600px] bg-white p-4 rounded-lg shadow-md">
       <Calendar
         localizer={localizer}
         events={events}
         startAccessor="start"
         endAccessor="end"
         titleAccessor="title"
+        style={{ height: '100%' }}
       />
     </div>
   );
