@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NotificationBox from '../components/NotificationBox';
 
 function Dashboard() {
   const [projects, setProjects] = useState([]);
@@ -91,7 +92,8 @@ function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">My Projects</h1>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
+          <NotificationBox onInvitationAccepted={fetchProjects} />
           <button
             onClick={() => setShowModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"

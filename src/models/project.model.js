@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 // Project schema for project management
+// Roles: Admin (full control), Editor (can modify tasks), Viewer (read-only)
 const projectSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -15,8 +16,8 @@ const projectSchema = new mongoose.Schema({
     required: true,
   },
   members: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    role: { type: String, enum: ['Admin', 'Editor', 'Viewer'], default: 'Viewer' },
   }],
 }, { timestamps: true });
 
