@@ -14,6 +14,12 @@ const userSchema = new mongoose.Schema({
   displayName: {
     type: String,
   },
+  // Pending project invitations
+  invitations: [{
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    projectName: { type: String },
+    inviterName: { type: String },
+  }],
 });
 
 export default mongoose.model('User', userSchema);
