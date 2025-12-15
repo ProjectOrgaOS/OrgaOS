@@ -95,6 +95,12 @@ function Dashboard() {
         <div className="flex items-center gap-4">
           <NotificationBox onInvitationAccepted={fetchProjects} />
           <button
+            onClick={() => navigate('/personal')}
+            className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition"
+          >
+            My Space
+          </button>
+          <button
             onClick={() => setShowModal(true)}
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
           >
