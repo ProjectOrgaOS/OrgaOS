@@ -81,11 +81,25 @@ function ProjectBoard() {
       }
     };
 
+    // Handle role updates in real-time
+    const handleRoleUpdated = ({ projectId: updatedProjectId, userId, newRole }) => {
+      if (String(updatedProjectId) === String(projectId)) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.userId === userId) {
+            setCurrentUserRole(newRole);
+          }
+        }
+      }
+    };
+
     socket.on('taskCreated', handleTaskCreated);
     socket.on('taskUpdated', handleTaskUpdated);
     socket.on('taskDeleted', handleTaskDeleted);
     socket.on('projectDeleted', handleProjectDeleted);
     socket.on('removedFromProject', handleRemovedFromProject);
+    socket.on('memberRoleUpdated', handleRoleUpdated);
 
     return () => {
       socket.emit('leaveProject', projectId);
@@ -94,6 +108,7 @@ function ProjectBoard() {
       socket.off('taskDeleted', handleTaskDeleted);
       socket.off('projectDeleted', handleProjectDeleted);
       socket.off('removedFromProject', handleRemovedFromProject);
+      socket.off('memberRoleUpdated', handleRoleUpdated);
     };
   }, [socket, projectId, navigate]);
 
