@@ -151,16 +151,16 @@ function PrivateTodo({ isActive, onFocus }) {
   return (
     <div
       ref={windowRef}
-      className={`bg-white rounded-xl shadow-lg flex flex-col ${position ? 'border border-gray-200' : ''}`}
+      className={`glass rounded-xl flex flex-col ${position ? 'border border-white/20' : ''}`}
       style={containerStyle}
       onMouseDown={onFocus}
     >
       {/* Draggable Header */}
       <div
-        className="p-3 border-b bg-gray-100 rounded-t-xl cursor-grab select-none flex justify-between items-center"
+        className="p-3 border-b border-white/10 rounded-t-xl cursor-grab select-none flex justify-between items-center"
         onMouseDown={handleMouseDown}
       >
-        <h2 className="text-lg font-bold text-gray-700">📝 Private To-Do</h2>
+        <h2 className="text-lg font-bold text-white">Private To-Do</h2>
       </div>
 
       <div className="p-4 flex-1 flex flex-col overflow-hidden">
@@ -171,11 +171,11 @@ function PrivateTodo({ isActive, onFocus }) {
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             placeholder="Add a task..."
-            className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm text-white placeholder-white/40"
           />
           <button
             type="submit"
-            className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm"
+            className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-2 rounded-lg hover:opacity-90 transition text-sm"
           >
             Add
           </button>
@@ -184,7 +184,7 @@ function PrivateTodo({ isActive, onFocus }) {
         {/* Task list */}
         <div className="flex-1 overflow-y-auto">
           {todos.length === 0 ? (
-            <p className="text-gray-400 text-center py-4 text-sm">No tasks yet</p>
+            <p className="text-white/40 text-center py-4 text-sm">No tasks yet</p>
           ) : (
             <ul className="space-y-2">
               {todos.map(todo => (
@@ -192,20 +192,20 @@ function PrivateTodo({ isActive, onFocus }) {
                   key={todo.id}
                   draggable={!todo.done}
                   onDragStart={(e) => handleDragStart(e, todo)}
-                  className={`flex items-center gap-2 p-2 bg-gray-50 rounded-lg group ${!todo.done ? 'cursor-grab hover:bg-blue-50' : ''}`}
+                  className={`flex items-center gap-2 p-2 bg-white/5 rounded-lg group ${!todo.done ? 'cursor-grab hover:bg-white/10' : ''}`}
                 >
                   <input
                     type="checkbox"
                     checked={todo.done}
                     onChange={() => handleToggle(todo.id)}
-                    className="w-4 h-4 text-blue-500 rounded cursor-pointer"
+                    className="w-4 h-4 rounded cursor-pointer accent-sky-500"
                   />
-                  <span className={`flex-1 text-sm ${todo.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  <span className={`flex-1 text-sm ${todo.done ? 'line-through text-white/40' : 'text-white/80'}`}>
                     {todo.text}
                   </span>
                   <button
                     onClick={() => handleDelete(todo.id)}
-                    className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition text-sm"
+                    className="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition text-sm"
                   >
                     ✕
                   </button>
@@ -217,7 +217,7 @@ function PrivateTodo({ isActive, onFocus }) {
 
         {/* Counter */}
         {todos.length > 0 && (
-          <p className="text-xs text-gray-400 mt-2 text-center">
+          <p className="text-xs text-white/40 mt-2 text-center">
             {todos.filter(t => t.done).length}/{todos.length} completed
           </p>
         )}
@@ -226,7 +226,7 @@ function PrivateTodo({ isActive, onFocus }) {
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="absolute bottom-1 right-1 w-4 h-4 cursor-se-resize flex items-center justify-center text-gray-400 hover:text-gray-600"
+        className="absolute bottom-1 right-1 w-4 h-4 cursor-se-resize flex items-center justify-center text-white/30 hover:text-white/50"
       >
         <svg width="10" height="10" viewBox="0 0 10 10">
           <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
