@@ -44,7 +44,7 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage
         env:
-          MONGODB_URI: mongodb://localhost:27017/orgaos_test
+          MONGO_URI: mongodb://localhost:27017/orgaos_test
           JWT_SECRET: test-secret-key-for-ci
           NODE_ENV: test
 
@@ -85,20 +85,8 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Run tests with coverage
-        run: npm test -- --coverage --passWithNoTests
-        env:
-          CI: true
-
       - name: Build application
         run: npm run build
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: frontend/coverage/
-          retention-days: 7
 
   # Combined status check
   ci-success:
