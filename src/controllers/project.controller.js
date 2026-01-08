@@ -175,14 +175,20 @@ export async function updateMemberRole(req, res) {
     project.members[memberIndex].role = role;
     await project.save();
 
-    // Emit socket event to all project members
+    // Emit socket event to all project members + directly to target user
     const io = req.app.get('io');
+    const userSockets = req.app.get('userSockets');
     if (io) {
-      io.to(`project:${projectId}`).emit('memberRoleUpdated', {
-        projectId,
-        userId: targetUserId,
-        newRole: role,
-      });
+      const payload = { projectId, userId: targetUserId, newRole: role };
+      // Emit to project room
+      io.to(`project:${projectId}`).emit('memberRoleUpdated', payload);
+      // Also emit directly to the target user's socket
+      if (userSockets) {
+        const targetSocketId = userSockets.get(targetUserId);
+        if (targetSocketId) {
+          io.to(targetSocketId).emit('memberRoleUpdated', payload);
+        }
+      }
     }
 
     res.status(200).json({ message: 'Role updated successfully' });
