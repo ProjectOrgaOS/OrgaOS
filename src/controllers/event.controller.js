@@ -38,7 +38,7 @@ export async function updateEvent(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
-    const { title, start, end, allDay } = req.body;
+    const { title, start, end, allDay, status } = req.body;
 
     const event = await Event.findById(id);
 
@@ -52,7 +52,13 @@ export async function updateEvent(req, res) {
 
     const updated = await Event.findByIdAndUpdate(
       id,
-      { title: title ?? event.title, start: start ?? event.start, end: end ?? event.end, allDay: allDay ?? event.allDay },
+      {
+        title: title ?? event.title,
+        start: start ?? event.start,
+        end: end ?? event.end,
+        allDay: allDay ?? event.allDay,
+        status: status ?? event.status
+      },
       { new: true }
     );
 

@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function CalendarView() {
   const [events, setEvents] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const menuRef = useRef(null);
 
   useEffect(() => {
     fetchEvents();
@@ -95,6 +98,52 @@ function CalendarView() {
     }
   };
 
+  const updateEventStatus = async (eventId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3000/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setEvents(prev => prev.map(e =>
+          e._id === eventId ? { ...updated, start: new Date(updated.start), end: new Date(updated.end) } : e
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating event status:', error);
+    }
+    setOpenMenuId(null);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+    if (openMenuId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
+
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'In Progress': return 'bg-orange-500 hover:bg-orange-600';
+      case 'Done': return 'bg-green-500 hover:bg-green-600';
+      default: return 'bg-blue-500 hover:bg-blue-600';
+    }
+  };
+
   // Calendar helpers
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -155,14 +204,6 @@ function CalendarView() {
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  // Handle right-click delete
-  const handleEventContextMenu = (e, event) => {
-    e.preventDefault();
-    if (window.confirm(`Delete "${event.title}"?`)) {
-      deleteEvent(event._id);
-    }
-  };
-
   const handleDragOver = (e) => {
     e.preventDefault();
   };
@@ -173,7 +214,7 @@ function CalendarView() {
   // Empty cells before first day
   for (let i = 0; i < startDay; i++) {
     calendarDays.push(
-      <div key={`empty-${i}`} className="bg-gray-50 border border-gray-200 min-h-0" />
+      <div key={`empty-${i}`} className="bg-white/5 border border-white/10 min-h-0" />
     );
   }
 
@@ -185,26 +226,70 @@ function CalendarView() {
     calendarDays.push(
       <div
         key={day}
-        className={`border border-gray-200 p-1 overflow-hidden hover:bg-blue-50 transition cursor-pointer min-h-0 flex flex-col ${
-          today ? 'bg-blue-100' : 'bg-white'
+        className={`border border-white/10 p-1 overflow-hidden hover:bg-white/10 transition cursor-pointer min-h-0 flex flex-col ${
+          today ? 'bg-sky-500/20' : 'bg-white/5'
         }`}
         onDrop={(e) => handleDrop(e, day)}
         onDragOver={handleDragOver}
       >
-        <div className={`text-xs font-semibold mb-1 ${today ? 'text-blue-600' : 'text-gray-600'}`}>
+        <div className={`text-xs font-semibold mb-1 ${today ? 'text-sky-300' : 'text-white/60'}`}>
           {day}
         </div>
         <div className="space-y-0.5 overflow-y-auto flex-1 min-h-0">
           {dayEvents.map(event => (
             <div
               key={event._id}
-              draggable
-              onDragStart={(e) => handleEventDragStart(e, event)}
-              onContextMenu={(e) => handleEventContextMenu(e, event)}
-              className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded truncate hover:bg-blue-600 cursor-grab active:cursor-grabbing transition"
-              title={event.title}
+              className="relative"
             >
-              {event.title}
+              <div
+                draggable
+                onDragStart={(e) => handleEventDragStart(e, event)}
+                className={`text-xs text-white px-1 py-0.5 rounded truncate cursor-grab active:cursor-grabbing transition flex items-center justify-between gap-1 ${getStatusColor(event.status)}`}
+                title={event.title}
+              >
+                <span className="truncate">{event.title}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setMenuPosition({ x: rect.right, y: rect.bottom + 4 });
+                    setOpenMenuId(openMenuId === event._id ? null : event._id);
+                  }}
+                  className="flex-shrink-0 hover:bg-white/20 rounded px-0.5"
+                >
+                  ⋮
+                </button>
+              </div>
+              {openMenuId === event._id && (
+                <div
+                  ref={menuRef}
+                  style={{ top: menuPosition.y, left: menuPosition.x - 140 }}
+                  className="fixed bg-slate-800 rounded-lg shadow-xl border border-white/20 py-1 z-[9999] min-w-[140px]"
+                >
+                  <div className="px-2 py-1 text-xs text-white/50 font-semibold">Status</div>
+                  {['To Do', 'In Progress', 'Done'].map(status => (
+                    <button
+                      key={status}
+                      onClick={() => updateEventStatus(event._id, status)}
+                      className={`w-full text-left px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 flex items-center gap-2 ${event.status === status ? 'font-semibold' : ''}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${status === 'To Do' ? 'bg-blue-500' : status === 'In Progress' ? 'bg-orange-500' : 'bg-green-500'}`}></span>
+                      {status}
+                      {event.status === status && <span className="ml-auto text-white/40">✓</span>}
+                    </button>
+                  ))}
+                  <div className="border-t border-white/10 my-1"></div>
+                  <button
+                    onClick={() => {
+                      deleteEvent(event._id);
+                      setOpenMenuId(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/20"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -213,28 +298,28 @@ function CalendarView() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 h-[550px] flex flex-col">
+    <div className="h-[550px] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-800">
+        <h2 className="text-xl font-bold text-white">
           {monthNames[month]} {year}
         </h2>
         <div className="flex gap-2">
           <button
             onClick={prevMonth}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white/70 rounded-lg text-sm transition"
           >
             ←
           </button>
           <button
             onClick={goToday}
-            className="px-3 py-1 bg-blue-500 text-white hover:bg-blue-600 rounded text-sm"
+            className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90 rounded-lg text-sm font-medium transition"
           >
             Today
           </button>
           <button
             onClick={nextMonth}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white/70 rounded-lg text-sm transition"
           >
             →
           </button>
@@ -244,14 +329,14 @@ function CalendarView() {
       {/* Day names header */}
       <div className="grid grid-cols-7 mb-1">
         {dayNames.map(name => (
-          <div key={name} className="text-center text-xs font-semibold text-gray-500 py-1">
+          <div key={name} className="text-center text-xs font-semibold text-white/40 py-2">
             {name}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0">
+      <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0 rounded-xl overflow-hidden border border-white/10">
         {calendarDays}
       </div>
 

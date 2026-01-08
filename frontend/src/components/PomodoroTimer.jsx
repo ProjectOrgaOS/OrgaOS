@@ -220,6 +220,21 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
   const handleStart = () => {
+    // Confirm any pending edit before starting
+    if (isEditing && editDigits) {
+      const seconds = parseDigitsToSeconds(editDigits);
+      if (seconds > 0) {
+        if (isEditing === 'work') {
+          setWorkTime(seconds);
+          if (mode === 'work') setTimeLeft(seconds);
+        } else {
+          setRelaxTime(seconds);
+          if (mode === 'relax') setTimeLeft(seconds);
+        }
+      }
+      setIsEditing(null);
+      setEditDigits('');
+    }
     setIsRunning(true);
     onRunningChange?.(true);
     onModeChange?.(mode);
@@ -249,7 +264,7 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
   return (
     <div
       ref={windowRef}
-      className={`bg-white rounded-xl shadow-lg flex flex-col ${position ? 'border border-gray-200' : ''}`}
+      className={`glass rounded-xl flex flex-col ${position ? 'border border-white/20' : ''}`}
       style={containerStyle}
       onKeyDown={handleKeyDown}
       onMouseDown={onFocus}
@@ -257,11 +272,11 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
     >
       {/* Draggable Header */}
       <div
-        className="p-3 border-b bg-gray-100 rounded-t-xl cursor-grab select-none flex justify-between items-center"
+        className="p-3 border-b border-white/10 rounded-t-xl cursor-grab select-none flex justify-between items-center"
         onMouseDown={handleMouseDown}
       >
-        <h2 className="text-lg font-bold text-gray-700">🍅 Pomodoro</h2>
-        <span className={`text-xs px-2 py-1 rounded ${mode === 'work' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+        <h2 className="text-lg font-bold text-white">Pomodoro Timer</h2>
+        <span className={`text-xs px-2 py-1 rounded ${mode === 'work' ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'}`}>
           {mode === 'work' ? 'Work' : 'Relax'}
         </span>
       </div>
@@ -271,32 +286,32 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
         <div className="flex gap-4 mb-4 text-sm">
           <div
             onClick={() => startEdit('work')}
-            className={`text-center cursor-pointer p-2 rounded transition ${isEditing === 'work' ? 'bg-red-100 ring-2 ring-red-400' : 'hover:bg-gray-100'}`}
+            className={`text-center cursor-pointer p-2 rounded transition ${isEditing === 'work' ? 'bg-red-500/20 ring-2 ring-red-400' : 'hover:bg-white/10'}`}
           >
-            <p className="text-xs text-gray-500 mb-1">Work</p>
-            <p className={`font-mono font-bold ${mode === 'work' ? 'text-red-500' : 'text-gray-600'}`}>
+            <p className="text-xs text-white/50 mb-1">Work</p>
+            <p className={`font-mono font-bold ${mode === 'work' ? 'text-red-400' : 'text-white/60'}`}>
               {isEditing === 'work' ? formatEditDigits(editDigits) : formatTime(workTime)}
             </p>
           </div>
           <div
             onClick={() => startEdit('relax')}
-            className={`text-center cursor-pointer p-2 rounded transition ${isEditing === 'relax' ? 'bg-green-100 ring-2 ring-green-400' : 'hover:bg-gray-100'}`}
+            className={`text-center cursor-pointer p-2 rounded transition ${isEditing === 'relax' ? 'bg-green-500/20 ring-2 ring-green-400' : 'hover:bg-white/10'}`}
           >
-            <p className="text-xs text-gray-500 mb-1">Relax</p>
-            <p className={`font-mono font-bold ${mode === 'relax' ? 'text-green-500' : 'text-gray-600'}`}>
+            <p className="text-xs text-white/50 mb-1">Relax</p>
+            <p className={`font-mono font-bold ${mode === 'relax' ? 'text-green-400' : 'text-white/60'}`}>
               {isEditing === 'relax' ? formatEditDigits(editDigits) : formatTime(relaxTime)}
             </p>
           </div>
         </div>
 
         {isEditing && (
-          <p className="text-xs text-gray-400 mb-2">Type digits, Enter to confirm</p>
+          <p className="text-xs text-white/40 mb-2">Type digits, Enter to confirm</p>
         )}
 
         {/* Circular Timer Display */}
         <div className="relative w-32 h-32 mb-4">
           <svg className="w-full h-full transform -rotate-90">
-            <circle cx="64" cy="64" r="56" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+            <circle cx="64" cy="64" r="56" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
             <circle
               cx="64"
               cy="64"
@@ -311,7 +326,7 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-xl font-mono font-bold ${mode === 'work' ? 'text-red-500' : 'text-green-500'}`}>
+            <span className={`text-xl font-mono font-bold ${mode === 'work' ? 'text-red-400' : 'text-green-400'}`}>
               {formatTime(timeLeft)}
             </span>
           </div>
@@ -336,7 +351,7 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
           )}
           <button
             onClick={handleReset}
-            className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm"
+            className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition text-sm"
           >
             Reset
           </button>
@@ -346,7 +361,7 @@ function PomodoroTimer({ onModeChange, onRunningChange, isActive, onFocus }) {
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="absolute bottom-1 right-1 w-4 h-4 cursor-se-resize flex items-center justify-center text-gray-400 hover:text-gray-600"
+        className="absolute bottom-1 right-1 w-4 h-4 cursor-se-resize flex items-center justify-center text-white/30 hover:text-white/50"
       >
         <svg width="10" height="10" viewBox="0 0 10 10">
           <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

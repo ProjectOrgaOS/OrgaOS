@@ -23,11 +23,41 @@ const io = new Server(server, {
 // Store io on app so controllers can access it via req.app.get('io')
 app.set('io', io);
 
-// Socket.io connection handler (we'll expand this later)
+// Map to track userId -> socketId for targeted emissions
+const userSockets = new Map();
+app.set('userSockets', userSockets);
+
+// Socket.io connection handler
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
+  // Register user when they authenticate
+  socket.on('register', (userId) => {
+    if (userId) {
+      userSockets.set(userId, socket.id);
+      socket.userId = userId;
+      console.log(`User ${userId} registered with socket ${socket.id}`);
+    }
+  });
+
+  // Join a project room for real-time updates
+  socket.on('joinProject', (projectId) => {
+    socket.join(`project:${projectId}`);
+    console.log(`Socket ${socket.id} joined project:${projectId}`);
+  });
+
+  // Leave a project room
+  socket.on('leaveProject', (projectId) => {
+    socket.leave(`project:${projectId}`);
+    console.log(`Socket ${socket.id} left project:${projectId}`);
+  });
+
   socket.on('disconnect', () => {
+    // Remove user from map on disconnect
+    if (socket.userId) {
+      userSockets.delete(socket.userId);
+      console.log(`User ${socket.userId} disconnected`);
+    }
     console.log('Client disconnected:', socket.id);
   });
 });

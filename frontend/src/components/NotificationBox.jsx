@@ -1,19 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useSocket } from '../context/SocketContext';
 
 function NotificationBox({ onInvitationAccepted }) {
   const [invitations, setInvitations] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [position, setPosition] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const buttonRef = useRef(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const socket = useSocket();
 
-  // Fetch invitations on mount
   useEffect(() => {
     fetchInvitations();
   }, []);
 
-  // Close dropdown when clicking outside
+  // Listen for real-time invitation events
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewInvitation = (invitation) => {
+      setInvitations(prev => [...prev, invitation]);
+    };
+
+    socket.on('newInvitation', handleNewInvitation);
+
+    return () => {
+      socket.off('newInvitation', handleNewInvitation);
+    };
+  }, [socket]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.notification-box')) {
+      if (!e.target.closest('.notification-box') && !e.target.closest('.notification-dropdown')) {
         setIsOpen(false);
       }
     };
@@ -21,13 +41,47 @@ function NotificationBox({ onInvitationAccepted }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Drag handlers
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDragging) {
+        setPosition({
+          x: e.clientX - dragOffset.current.x,
+          y: e.clientY - dragOffset.current.y,
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleDragStart = (e) => {
+    if (position) {
+      dragOffset.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      };
+    }
+    setIsDragging(true);
+  };
+
   const fetchInvitations = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3000/api/users/invitations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await response.json();
       if (response.ok) {
@@ -52,10 +106,7 @@ function NotificationBox({ onInvitationAccepted }) {
       });
 
       if (response.ok) {
-        // Remove from local state
         setInvitations(prev => prev.filter(inv => inv.projectId !== projectId));
-
-        // If accepted, notify parent to refresh projects
         if (accept && onInvitationAccepted) {
           onInvitationAccepted();
         }
@@ -67,68 +118,94 @@ function NotificationBox({ onInvitationAccepted }) {
     }
   };
 
+  const handleToggle = (e) => {
+    e.stopPropagation();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({
+        x: rect.right - 320,
+        y: rect.bottom + 8
+      });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  const dropdown = isOpen && (
+    <div
+      className="notification-dropdown"
+      style={{
+        position: 'fixed',
+        left: position?.x || 0,
+        top: position?.y || 0,
+        zIndex: 99999,
+      }}
+    >
+      <div className="w-80 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Draggable header */}
+        <div
+          className="p-4 border-b border-white/10 cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={handleDragStart}
+        >
+          <h3 className="font-semibold text-white">Invitations</h3>
+        </div>
+
+        {invitations.length === 0 ? (
+          <div className="p-6 text-center text-white/60">
+            No pending invitations
+          </div>
+        ) : (
+          <div className="max-h-64 overflow-y-auto">
+            {invitations.map((inv) => (
+              <div key={inv.projectId} className="p-4 border-b border-white/10 last:border-b-0 hover:bg-white/5 transition">
+                <p className="font-medium text-white">{inv.projectName}</p>
+                <p className="text-sm text-white/60">
+                  Invited by {inv.inviterName}
+                </p>
+
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleRespond(inv.projectId, true)}
+                    disabled={loading}
+                    className="flex-1 bg-green-500/80 hover:bg-green-500 text-white text-sm py-1.5 px-3 rounded-lg transition disabled:opacity-50 font-medium"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleRespond(inv.projectId, false)}
+                    disabled={loading}
+                    className="flex-1 bg-red-500/80 hover:bg-red-500 text-white text-sm py-1.5 px-3 rounded-lg transition disabled:opacity-50 font-medium"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="notification-box relative">
       {/* Bell Icon Button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full transition"
+        ref={buttonRef}
+        onClick={handleToggle}
+        className="relative glass-btn p-2 rounded-xl text-white transition"
       >
         <span className="text-xl">🔔</span>
 
-        {/* Red badge with count */}
+        {/* Badge with count */}
         {invitations.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium animate-pulse">
             {invitations.length}
           </span>
         )}
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50">
-          <div className="p-3 border-b">
-            <h3 className="font-semibold text-gray-700">Invitations</h3>
-          </div>
-
-          {invitations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              No pending invitations
-            </div>
-          ) : (
-            <div className="max-h-64 overflow-y-auto">
-              {invitations.map((inv) => (
-                <div key={inv.projectId} className="p-3 border-b last:border-b-0 hover:bg-gray-50">
-                  <p className="font-medium text-gray-800">{inv.projectName}</p>
-                  <p className="text-sm text-gray-500">
-                    Invited by {inv.inviterName}
-                  </p>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => handleRespond(inv.projectId, true)}
-                      disabled={loading}
-                      className="flex-1 bg-green-500 text-white text-sm py-1 px-3 rounded hover:bg-green-600 transition disabled:opacity-50"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleRespond(inv.projectId, false)}
-                      disabled={loading}
-                      className="flex-1 bg-red-500 text-white text-sm py-1 px-3 rounded hover:bg-red-600 transition disabled:opacity-50"
-                    >
-                      Decline
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Render dropdown via portal to escape stacking context */}
+      {createPortal(dropdown, document.body)}
     </div>
   );
 }
