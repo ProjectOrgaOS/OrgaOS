@@ -93,10 +93,11 @@ export async function sendInvite(req, res) {
     // Emit socket event to the invited user
     const io = req.app.get('io');
     const userSockets = req.app.get('userSockets');
-    const targetSocketId = userSockets.get(userToInvite._id.toString());
-
-    if (targetSocketId) {
-      io.to(targetSocketId).emit('newInvitation', invitation);
+    if (io && userSockets) {
+      const targetSocketId = userSockets.get(userToInvite._id.toString());
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('newInvitation', invitation);
+      }
     }
 
     res.status(200).json({ message: 'Invitation sent successfully' });
@@ -176,11 +177,13 @@ export async function updateMemberRole(req, res) {
 
     // Emit socket event to all project members
     const io = req.app.get('io');
-    io.to(`project:${projectId}`).emit('memberRoleUpdated', {
-      projectId,
-      userId: targetUserId,
-      newRole: role,
-    });
+    if (io) {
+      io.to(`project:${projectId}`).emit('memberRoleUpdated', {
+        projectId,
+        userId: targetUserId,
+        newRole: role,
+      });
+    }
 
     res.status(200).json({ message: 'Role updated successfully' });
   } catch (error) {
@@ -226,16 +229,20 @@ export async function removeMember(req, res) {
 
     // Emit socket event to notify all project members
     const io = req.app.get('io');
-    io.to(`project:${projectId}`).emit('memberRemoved', {
-      projectId,
-      userId: targetUserId,
-    });
-
-    // Also notify the removed user directly
     const userSockets = req.app.get('userSockets');
-    const targetSocketId = userSockets.get(targetUserId);
-    if (targetSocketId) {
-      io.to(targetSocketId).emit('removedFromProject', { projectId });
+    if (io) {
+      io.to(`project:${projectId}`).emit('memberRemoved', {
+        projectId,
+        userId: targetUserId,
+      });
+
+      // Also notify the removed user directly
+      if (userSockets) {
+        const targetSocketId = userSockets.get(targetUserId);
+        if (targetSocketId) {
+          io.to(targetSocketId).emit('removedFromProject', { projectId });
+        }
+      }
     }
 
     res.status(200).json({ message: 'Member removed successfully' });
@@ -268,7 +275,9 @@ export async function deleteProject(req, res) {
 
     // Emit socket event before deleting to notify all members
     const io = req.app.get('io');
-    io.to(`project:${projectId}`).emit('projectDeleted', { projectId });
+    if (io) {
+      io.to(`project:${projectId}`).emit('projectDeleted', { projectId });
+    }
 
     // Delete the project
     await Project.findByIdAndDelete(projectId);
