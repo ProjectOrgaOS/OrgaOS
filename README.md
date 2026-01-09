@@ -4,10 +4,12 @@ A simple project management app with Kanban boards, real-time collaboration, and
 
 ## Prerequisites
 
-- Node.js (v18+)
-- MongoDB running locally or a MongoDB Atlas URI
+- Node.js (v20+)
+- MongoDB running locally (`mongod`) or a MongoDB Atlas URI
 
 ## Setup
+
+> **Note:** You need 2 terminals: one for backend, one for frontend.
 
 ### 1. Backend
 
@@ -45,3 +47,22 @@ Frontend runs on `http://localhost:5173`
 - Project management with Kanban boards
 - Real-time collaboration (Socket.IO)
 - Personal space with calendar, Pomodoro timer, and private to-do list
+
+## Project Structure
+
+```
+OrgaOS/
+├── src/                    # Backend (Node.js + Express + Socket.IO)
+│   ├── controllers/        # Business logic
+│   ├── models/             # MongoDB schemas
+│   ├── routes/             # REST API endpoints
+│   └── middleware/         # Auth + Logging (Pino)
+│
+├── frontend/src/           # Frontend (React 19 + Vite + TailwindCSS)
+│   ├── pages/              # Landing, Dashboard, ProjectBoard, PersonalSpace
+│   ├── components/         # Calendar, Pomodoro, Todos, MembersModal
+│   └── context/            # Socket.IO provider
+│
+├── tests/                  # 66 tests (Vitest + Supertest)
+└── .github/workflows/      # CI/CD (GitHub Actions)
+```
